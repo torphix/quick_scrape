@@ -1,3 +1,4 @@
+import os
 import time
 import boto3
 import asyncio
@@ -11,6 +12,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 def main():
+    os.system('wget https://chromedriver.storage.googleapis.com/80.0.3987.106/chromedriver_linux64.zip')
+    os.system('unzip chromedriver_linux64.zip')
+    os.system('mv chromedriver /usr/bin/chromedriver')
     scraper = Scraper()
     scraper.scrape()
 
