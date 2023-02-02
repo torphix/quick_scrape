@@ -41,7 +41,7 @@ def main_remote(query):
 class Scraper:
     def __init__(self, query: str = "", remote_deployment: bool = False):
         if query != "":
-            self.main_url = f"https://lexica.art/?={query}"
+            self.main_url = f"https://lexica.art/?q={query}"
         else:
             self.main_url = "https://lexica.art/"
 
@@ -70,13 +70,14 @@ class Scraper:
             # Scrape images on current page
             self.loop_through_images()
             # Refresh page
-            print("Refreshing page")
             self.refresh_interval_counter += 1
             # ie not a query
             if "?q=" not in self.main_url:
+                print("Refreshing page")
                 self.browser.refresh()
                 time.sleep(5)
             else:
+                print("scrolling down")
                 # scroll down to bottom of page as refresh doens't regenerate images
                 self.scroll_down()
 
@@ -160,7 +161,7 @@ class Scraper:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--query", type=str, default="")
+    parser.add_argument("--query", type=str, default="scary")
     args = parser.parse_args()
 
     main_local(args.query)
