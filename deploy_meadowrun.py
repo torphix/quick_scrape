@@ -16,7 +16,17 @@ if __name__ == "__main__":
                 interpreter=meadowrun.PipRequirementsFile(
                     "requirements.txt",
                     python_version="3.8",
-                    additional_software=["python-tk", "wget", "curl", "unzip", "rpm"],
+                    additional_software=[
+                        "python-tk",
+                        "wget",
+                        "curl",
+                        "unzip",
+                        "rpm",
+                        "libglib2.0-0",
+                        "libnss3",
+                        "libgconf-2-4",
+                        "libfontconfig1",
+                    ],
                 ),
             ),
             args=["beautiful"],

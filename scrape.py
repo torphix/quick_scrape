@@ -26,6 +26,10 @@ def main_remote(query):
     )
     os.system("unzip chromedriver_linux64.zip")
     os.system("mv chromedriver /usr/bin/chromedriver")
+    os.system(
+        "wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+    )
+    os.system("apt install ./google-chrome*.deb")
     # # install chrome
     # os.system("curl https://intoli.com/install-google-chrome.sh | bash")
     # os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
