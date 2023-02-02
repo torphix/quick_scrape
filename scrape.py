@@ -21,15 +21,15 @@ def main_local(query):
 
 
 def main_remote(query):
-    os.system(
-        "wget https://chromedriver.storage.googleapis.com/2.37/chromedriver_linux64.zip"
-    )
-    os.system("unzip chromedriver_linux64.zip")
-    os.system("mv chromedriver /usr/bin/chromedriver")
-    # install chrome
-    os.system("curl https://intoli.com/install-google-chrome.sh | bash")
-    os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
-    os.system("google-chrome --version && which google-chrome")
+    # os.system(
+    #     "wget https://chromedriver.storage.googleapis.com/109.0.5414.74/chromedriver_linux64.zip"
+    # )
+    # os.system("unzip chromedriver_linux64.zip")
+    # os.system("mv chromedriver /usr/bin/chromedriver")
+    # # install chrome
+    # os.system("curl https://intoli.com/install-google-chrome.sh | bash")
+    # os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
+    # os.system("google-chrome --version && which google-chrome")
     # install xvfb
     scraper = Scraper(query, True)
     scraper.scrape()
