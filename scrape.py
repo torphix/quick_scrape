@@ -7,7 +7,6 @@ import argparse
 import meadowrun
 import tkinter as tk
 from selenium import webdriver
-from chromedriver_py import binary_path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -22,16 +21,15 @@ def main_local(query):
 
 
 def main_remote(query):
-    # os.system(
-    #     "wget https://chromedriver.storage.googleapis.com/109.0.5414.74/chromedriver_linux64.zip"
-    # )
-    # os.system("unzip chromedriver_linux64.zip")
-    # os.system("mv chromedriver /usr/bin/chromedriver")
+    os.system(
+        "wget https://chromedriver.storage.googleapis.com/109.0.5414.74/chromedriver_linux64.zip"
+    )
+    os.system("unzip chromedriver_linux64.zip")
+    os.system("mv chromedriver /usr/bin/chromedriver")
     # # install chrome
     # os.system("curl https://intoli.com/install-google-chrome.sh | bash")
     # os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
     # os.system("google-chrome --version && which google-chrome")
-    # install xvfb
     scraper = Scraper(query, True)
     scraper.scrape()
 
@@ -46,7 +44,7 @@ class Scraper:
         if remote_deployment:
             options = Options()
             options.headless = True
-            self.browser = webdriver.Chrome(options=options, binary_path=binary_path)
+            self.browser = webdriver.Chrome(options=options)
         else:
             self.browser = webdriver.Chrome()
 
