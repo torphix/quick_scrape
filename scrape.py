@@ -45,14 +45,12 @@ class Scraper:
         else:
             self.main_url = "https://lexica.art/"
 
-        if remote_deployment:
-            options = Options()
-            options.add_argument("--headless")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            self.browser = webdriver.Chrome("/usr/bin/chromedriver", options=options)
-        else:
-            self.browser = webdriver.Chrome()
+        # if remote_deployment:
+        options = Options()
+
+        self.browser = webdriver.Chrome(options=options)
+        # else:
+        # self.browser = webdriver.Chrome()
 
         self.main_url = self.main_url
         self.prompt_list = []
