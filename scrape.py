@@ -30,6 +30,7 @@ def main_remote(query):
         "wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
     )
     os.system("apt install ./google-chrome*.deb")
+    os.system("ln -s /usr/bin/google-chrome-stable /usr/bin/chromium")
     # # install chrome
     # os.system("curl https://intoli.com/install-google-chrome.sh | bash")
     # os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
