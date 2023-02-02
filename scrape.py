@@ -47,8 +47,10 @@ class Scraper:
 
         if remote_deployment:
             options = Options()
-            options.headless = True
-            self.browser = webdriver.Chrome(options=options)
+            options.add_argument("--headless")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            self.browser = webdriver.Chrome("/usr/bin/chromedriver", options=options)
         else:
             self.browser = webdriver.Chrome()
 
