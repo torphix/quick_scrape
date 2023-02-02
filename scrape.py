@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 import boto3
 import asyncio
 import argparse
@@ -13,11 +14,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 
 
-def main_local():
-    scraper = Scraper()
+def main_local(url):
+    scraper = Scraper(url)
     scraper.scrape()
 
-def main_remote():
+def main_remote(url):
     os.system('wget https://chromedriver.storage.googleapis.com/2.37/chromedriver_linux64.zip')
     os.system('unzip chromedriver_linux64.zip')
     os.system('mv chromedriver /usr/bin/chromedriver')
@@ -26,7 +27,7 @@ def main_remote():
     os.system('mv /usr/bin/google-chrome-stable /usr/bin/google-chrome')
     os.system('google-chrome --version && which google-chrome')
     # install xvfb
-    scraper = Scraper()
+    scraper = Scraper(url)
     scraper.scrape()
 
 
@@ -38,7 +39,7 @@ class Scraper:
         self.prompt_list = []
         self.url_list = []
         self.data_chunk_size = 5
-        self.max_images = 10000
+        self.max_images = 100000
         self.current_count = 0
         self.scroll_pause_time = 5
         self.refresh_interval_counter = 1
@@ -53,13 +54,23 @@ class Scraper:
             # Refresh page
             print('Refreshing page')
             self.refresh_interval_counter += 1
-            self.browser.refresh()
-            time.sleep(5)
+            # ie not a query
+            if '?q=' not in  self.main_url:
+                self.browser.refresh()
+                time.sleep(5)
+            else:
+                # scroll down to bottom of page as refresh doens't regenerate images
+                self.scroll_down()
+            
 
         # write file to s3 bucket
         s3 = boto3.resource("s3")
         print("Uploading file to s3 bucket")
-        s3.meta.client.upload_file("dataset.tsv", "lexica-dataset", "dataset.tsv")
+        try:
+            query = self.main_url.split('q')[-1]
+        except:
+            query = 'all'
+        s3.meta.client.upload_file("dataset.tsv", "lexica-dataset", f"{str(uuid.uuid4())}-{query}-dataset.tsv")
 
     def scroll_down(self):
         # Scroll down to bottom
@@ -129,6 +140,7 @@ class Scraper:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_remotely", action="store_true")
+    parser.add_argument("--url", type=str, default="https://lexica.art/")
     args = parser.parse_args()
 
     if args.run_remotely:
@@ -142,11 +154,12 @@ if __name__ == "__main__":
                     interpreter=meadowrun.PipRequirementsFile(
                         "requirements.txt",
                         python_version="3.8",
-                        additional_software='python-tk',
+                        additional_software=['python-tk','wget','curl','unzip'],
                     ),
                 ),
+                args=[args.url]
             )
         )
     else:
-        main_local()
+        main_local(args.url)
 
