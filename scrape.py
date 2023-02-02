@@ -154,7 +154,7 @@ if __name__ == "__main__":
                     interpreter=meadowrun.PipRequirementsFile(
                         "requirements.txt",
                         python_version="3.8",
-                        additional_software=['python-tk','wget','curl','unzip'],
+                        additional_software=['python-tk','wget','curl','unzip', 'rpm'],
                     ),
                 ),
                 args=[args.url]
