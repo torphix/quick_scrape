@@ -7,6 +7,7 @@ import argparse
 import meadowrun
 import tkinter as tk
 from selenium import webdriver
+from chromedriver_py import binary_path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
@@ -45,7 +46,7 @@ class Scraper:
         if remote_deployment:
             options = Options()
             options.headless = True
-            self.browser = webdriver.Chrome(options=options)
+            self.browser = webdriver.Chrome(options=options, binary_path=binary_path)
         else:
             self.browser = webdriver.Chrome()
 
