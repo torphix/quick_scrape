@@ -9,32 +9,46 @@ import tkinter as tk
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 
 
-def main_local(url):
-    scraper = Scraper(url)
+def main_local(query):
+    scraper = Scraper(query, False)
     scraper.scrape()
 
-def main_remote(url):
-    os.system('wget https://chromedriver.storage.googleapis.com/2.37/chromedriver_linux64.zip')
-    os.system('unzip chromedriver_linux64.zip')
-    os.system('mv chromedriver /usr/bin/chromedriver')
+
+def main_remote(query):
+    os.system(
+        "wget https://chromedriver.storage.googleapis.com/2.37/chromedriver_linux64.zip"
+    )
+    os.system("unzip chromedriver_linux64.zip")
+    os.system("mv chromedriver /usr/bin/chromedriver")
     # install chrome
-    os.system('curl https://intoli.com/install-google-chrome.sh | bash')
-    os.system('mv /usr/bin/google-chrome-stable /usr/bin/google-chrome')
-    os.system('google-chrome --version && which google-chrome')
+    os.system("curl https://intoli.com/install-google-chrome.sh | bash")
+    os.system("mv /usr/bin/google-chrome-stable /usr/bin/google-chrome")
+    os.system("google-chrome --version && which google-chrome")
     # install xvfb
-    scraper = Scraper(url)
+    scraper = Scraper(query, True)
     scraper.scrape()
 
 
 class Scraper:
-    def __init__(self, main_url: str = "https://lexica.art/"):
-        self.main_url = main_url
-        self.browser = webdriver.Chrome()
+    def __init__(self, query: str = "", remote_deployment: bool = False):
+        if query != "":
+            self.main_url = f"https://lexica.art/?={query}"
+        else:
+            self.main_url = "https://lexica.art/"
+
+        if remote_deployment:
+            options = Options()
+            options.headless = True
+            self.browser = webdriver.Chrome(options=options)
+        else:
+            self.browser = webdriver.Chrome()
+
         self.main_url = self.main_url
         self.prompt_list = []
         self.url_list = []
@@ -45,32 +59,32 @@ class Scraper:
         self.refresh_interval_counter = 1
 
     def scrape(self):
-
         self.browser.get(self.main_url)
         while self.current_count < self.max_images:
             # Scroll down twice to load more images
             # Scrape images on current page
             self.loop_through_images()
             # Refresh page
-            print('Refreshing page')
+            print("Refreshing page")
             self.refresh_interval_counter += 1
             # ie not a query
-            if '?q=' not in  self.main_url:
+            if "?q=" not in self.main_url:
                 self.browser.refresh()
                 time.sleep(5)
             else:
                 # scroll down to bottom of page as refresh doens't regenerate images
                 self.scroll_down()
-            
 
         # write file to s3 bucket
         s3 = boto3.resource("s3")
         print("Uploading file to s3 bucket")
         try:
-            query = self.main_url.split('q')[-1]
+            query = self.main_url.split("q")[-1]
         except:
-            query = 'all'
-        s3.meta.client.upload_file("dataset.tsv", "lexica-dataset", f"{str(uuid.uuid4())}-{query}-dataset.tsv")
+            query = "all"
+        s3.meta.client.upload_file(
+            "dataset.tsv", "lexica-dataset", f"{str(uuid.uuid4())}-{query}-dataset.tsv"
+        )
 
     def scroll_down(self):
         # Scroll down to bottom
@@ -105,7 +119,9 @@ class Scraper:
                 self.prompt_list = self.write_data_from_clipboard(self.prompt_list)
                 time.sleep(3)
                 WebDriverWait(self.browser, 40).until(
-                    EC.visibility_of_element_located((By.XPATH, '//div[text()="Copy URL"]'))
+                    EC.visibility_of_element_located(
+                        (By.XPATH, '//div[text()="Copy URL"]')
+                    )
                 ).click()
                 self.url_list = self.write_data_from_clipboard(self.url_list)
                 time.sleep(3)
@@ -139,27 +155,7 @@ class Scraper:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--run_remotely", action="store_true")
-    parser.add_argument("--url", type=str, default="https://lexica.art/")
+    parser.add_argument("--query", type=str, default="")
     args = parser.parse_args()
 
-    if args.run_remotely:
-        asyncio.run(
-            meadowrun.run_function(
-                main_remote,
-                meadowrun.AllocEC2Instance("eu-west-2"),
-                meadowrun.Resources(logical_cpu=1, memory_gb=4, max_eviction_rate=80),
-                meadowrun.Deployment.git_repo(
-                    "https://github.com/torphix/quick_scrape.git",
-                    interpreter=meadowrun.PipRequirementsFile(
-                        "requirements.txt",
-                        python_version="3.8",
-                        additional_software=['python-tk','wget','curl','unzip', 'rpm'],
-                    ),
-                ),
-                args=[args.url]
-            )
-        )
-    else:
-        main_local(args.url)
-
+    main_local(args.query)
