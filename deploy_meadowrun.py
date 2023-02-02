@@ -26,7 +26,6 @@ if __name__ == "__main__":
                         "libnss3",
                         "libgconf-2-4",
                         "libfontconfig1",
-                        "chromium-browser",
                     ],
                 ),
             ),
