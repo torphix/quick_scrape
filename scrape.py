@@ -2,6 +2,7 @@ import os
 import time
 import boto3
 import asyncio
+import argparse
 import meadowrun
 import tkinter as tk
 from selenium import webdriver
@@ -9,45 +10,56 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 
 
-def main():
-    os.system('wget https://chromedriver.storage.googleapis.com/80.0.3987.106/chromedriver_linux64.zip')
-    os.system('unzip chromedriver_linux64.zip')
-    os.system('mv chromedriver /usr/bin/chromedriver')
+def main_local():
     scraper = Scraper()
     scraper.scrape()
+
+def main_remote():
+    os.system('wget https://chromedriver.storage.googleapis.com/2.37/chromedriver_linux64.zip')
+    os.system('unzip chromedriver_linux64.zip')
+    os.system('mv chromedriver /usr/bin/chromedriver')
+    # install chrome
+    os.system('curl https://intoli.com/install-google-chrome.sh | bash')
+    os.system('mv /usr/bin/google-chrome-stable /usr/bin/google-chrome')
+    os.system('google-chrome --version && which google-chrome')
+    # install xvfb
+    scraper = Scraper()
+    scraper.scrape()
+
 
 class Scraper:
     def __init__(self, main_url: str = "https://lexica.art/"):
         self.main_url = main_url
-
-    def scrape(self):
         self.browser = webdriver.Chrome()
         self.main_url = self.main_url
         self.prompt_list = []
         self.url_list = []
-        self.data_chunk_size = 50
+        self.data_chunk_size = 5
         self.max_images = 10000
         self.current_count = 0
         self.scroll_pause_time = 5
-        self.historical_images = []
         self.refresh_interval_counter = 1
-        # self.browser.get(self.main_url)
-        # while self.current_count < self.max_images:
-        #     # Scroll down twice to load more images
-        #     # Scrape images on current page
-        #     self.loop_through_images()
-        #     # Refresh page
-        #     print('Refreshing page')
-        #     self.refresh_interval_counter += 1
-        #     self.browser.refresh()
-        #     time.sleep(5)
+
+    def scrape(self):
+
+        self.browser.get(self.main_url)
+        while self.current_count < self.max_images:
+            # Scroll down twice to load more images
+            # Scrape images on current page
+            self.loop_through_images()
+            # Refresh page
+            print('Refreshing page')
+            self.refresh_interval_counter += 1
+            self.browser.refresh()
+            time.sleep(5)
 
         # write file to s3 bucket
         s3 = boto3.resource("s3")
         print("Uploading file to s3 bucket")
-        s3.meta.client.upload_file("dataset.csv", "lexica-dataset", "dataset.csv")
+        s3.meta.client.upload_file("dataset.tsv", "lexica-dataset", "dataset.tsv")
 
     def scroll_down(self):
         # Scroll down to bottom
@@ -59,38 +71,44 @@ class Scraper:
         # select all img tags
         img_tags = self.browser.find_elements(By.TAG_NAME, "img")
         # remove images that have already been scraped
-        img_tags = [img for img in img_tags if img not in self.historical_images]
         # Iterate over img_tags clicking on each one and copying the image url
         time.sleep(2)
         self.current_count += len(img_tags)
         for img in img_tags:
-            img.click()
-            time.sleep(5)
-            if "Lexica Aperture v2" not in self.browser.page_source:
-                print("Lexica Aperture v2 not found")
+            try:
+                # Scroll to image
+                actions = ActionChains(self.browser)
+                actions.move_to_element(img).perform()
+                time.sleep(1)
+                img.click()
+                time.sleep(5)
+                if "Lexica Aperture v2" not in self.browser.page_source:
+                    print("Lexica Aperture v2 not found")
+                    continue
+                # find the element by the text contained in the button
+                WebDriverWait(self.browser, 40).until(
+                    EC.visibility_of_element_located(
+                        (By.XPATH, '//div[text()="Copy prompt"]')
+                    )
+                ).click()
+                self.prompt_list = self.write_data_from_clipboard(self.prompt_list)
+                time.sleep(3)
+                WebDriverWait(self.browser, 40).until(
+                    EC.visibility_of_element_located((By.XPATH, '//div[text()="Copy URL"]'))
+                ).click()
+                self.url_list = self.write_data_from_clipboard(self.url_list)
+                time.sleep(3)
+                webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
+                print(self.url_list, self.prompt_list)
+                time.sleep(3)
+            except Exception as e:
+                print(e)
                 continue
-            # find the element by the text contained in the button
-            WebDriverWait(self.browser, 40).until(
-                EC.visibility_of_element_located(
-                    (By.XPATH, '//div[text()="Copy prompt"]')
-                )
-            ).click()
-            self.prompt_list = self.write_data_from_clipboard(self.prompt_list)
-            time.sleep(3)
-            WebDriverWait(self.browser, 40).until(
-                EC.visibility_of_element_located((By.XPATH, '//div[text()="Copy URL"]'))
-            ).click()
-            self.url_list = self.write_data_from_clipboard(self.url_list)
-            time.sleep(3)
-            webdriver.ActionChains(self.browser).send_keys(Keys.ESCAPE).perform()
-            print(self.url_list, self.prompt_list)
-            time.sleep(3)
             if len(self.prompt_list) == self.data_chunk_size:
                 print("Logging")
                 self.append_data_to_file(self.prompt_list, self.url_list)
         print("End of loop Logging remenants")
         self.append_data_to_file(self.prompt_list, self.url_list)
-        self.historical_images += img_tags
 
     def append_data_to_file(self, prompt_list, url_list):
         # append data to end of csv file
@@ -109,11 +127,26 @@ class Scraper:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run_remotely", action="store_true")
+    args = parser.parse_args()
 
-    asyncio.run(
-        meadowrun.run_function(
-            main,
-            meadowrun.AllocEC2Instance('eu-west-2'),
-            meadowrun.Resources(logical_cpu=1, memory_gb=4, max_eviction_rate=80),
+    if args.run_remotely:
+        asyncio.run(
+            meadowrun.run_function(
+                main_remote,
+                meadowrun.AllocEC2Instance("eu-west-2"),
+                meadowrun.Resources(logical_cpu=1, memory_gb=4, max_eviction_rate=80),
+                meadowrun.Deployment.git_repo(
+                    "https://github.com/torphix/quick_scrape.git",
+                    interpreter=meadowrun.PipRequirementsFile(
+                        "requirements.txt",
+                        python_version="3.8",
+                        additional_software='python-tk',
+                    ),
+                ),
+            )
         )
-    )
+    else:
+        main_local()
+
